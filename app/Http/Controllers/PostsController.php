@@ -8,6 +8,7 @@ use App\Models\BlogPost;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Gate;
 
 class PostsController extends Controller
@@ -43,11 +44,26 @@ class PostsController extends Controller
 
     public function index()
     {
+
+        // STORING CACHE
+
+        $mostCommented = Cache::remember('mostCommented', 60, function(){
+            return BlogPost::mostCommented()->take(5)->get();
+        });
+
+        $mostActive = Cache::remember('mostActive', 60, function(){
+            return User::withMostBlogPosts()->take(5)->get();
+        });
+
+        $mostActiveLastMonth = Cache::remember('mostActiveLastMonth', 60, function(){
+            return User::withMostBlogPostsLastMonth()->take(5)->get();
+        });
+
         return view('lists.posts', [
-    'posts' => BlogPost::latest()->withCount('comments')->get(),
-    'mostCommented' => BlogPost::mostCommented()->take(5)->get(),
-    'mostActive' => User::withMostBlogPosts()->take(5)->get(),
-    'mostActiveLastMonth' => User::withMostBlogPostsLastMonth()->take(5)->get()]);
+    'posts' => BlogPost::latest()->withCount('comments')->with('user')->get(),
+    'mostCommented' => $mostCommented,
+    'mostActive' => $mostActive,
+    'mostActiveLastMonth' => $mostActiveLastMonth]);
     }
 
     /**
